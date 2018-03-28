@@ -89,7 +89,25 @@ root@DESKTOP-EAJVPOG:/mnt/c/Users/lanro/bitcoin/bitcoin# bitcoin-cli decoderawtr
   ]
 }
 
-6. Key, Address
+6. 安装bx
+https://github.com/libbitcoin/libbitcoin-explorer
+
+sudo apt-get install libboost-all-dev
+$ mkdir build-zeromq-4.2.0
+$ pushd build-zeromq-4.2.0
+$ wget https://github.com/zeromq/libzmq/releases/download/v4.2.0/zeromq-4.2.0.tar.gz
+$ tar --extract --file zeromq-4.2.0.tar.gz --gz --strip-components=1
+$ ./autogen.sh
+$ ./configure
+$ make
+$ sudo make install
+$ sudo ldconfig
+$ popd
+$ wget https://raw.githubusercontent.com/libbitcoin/libbitcoin-explorer/version3/install.sh
+$ chmod +x install.sh
+$ sudo ./install.sh
+
+7. Key, Address
 生成新地址
 root@DESKTOP-EAJVPOG:/mnt/c/Users/lanro/bitcoin/bitcoin# bitcoin-cli getnewaddress
 373ZDCVvoptaQLYF71b4Z1zuzeauGDJg7E
@@ -124,5 +142,5 @@ root@DESKTOP-EAJVPOG:/mnt/c/Users/lanro/bitcoin/bitcoin# bx base58check-encode 5
 
 BIP-38是对WIF(5***)private key用密钥进行AES加密，结果是base58Check_encoded private key string, 以6P开头. 
 
-7. wallet
+8. wallet
 签包是私钥的容器，一般实现为结构化文件或者简单的数据库
