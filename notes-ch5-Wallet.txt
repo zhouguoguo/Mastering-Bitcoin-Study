@@ -1,0 +1,50 @@
+签包是私钥的容器，一般实现为结构化文件或者简单的数据库、
+钱包分两种类型：
+随机签包nondeterministic wallet,also known as a JBOK wallet from the phrase "Just a Bunch Of Keys." -- key互相之前没有关系
+确定性签包a deterministic wallet,known as a hierarchical deterministic or HD wallet -- 所有的key都是从一个master key(seed)中产生的
+
+Deterministic wallets are initialized from a seed. To make these easier to use, seeds are encoded as English words, also known as mnemonic code words.
+确定性钱包是由种子初始化的。为了便于使用，种子被编码为英语单词，也被称为助记码字。
+
+BP-32是确定性签包HD wallet的标准
+HD树形组织key的形式好处之一是可以按结构组织key的不同用途；好处之二是可以生成公钥，而不碰对应的私钥，这在某些情况下很有用，当签包放在不安全的服务器上使用，或者冷钱包？
+
+BP-39是通过助记词来产生seed的标准
+
+Wallet Best Practices
+a.Mnemonic code words, based on BIP-39
+b.HD wallets, based on BIP-32
+c.Multipurpose HD wallet structure, based on BIP-43
+d.Multicurrency and multiaccount wallets, based on BIP-44
+
+BIP39步骤:
+-Create a random sequence (entropy) of 128 to 256 bits.
+-Create a checksum of the random sequence by taking the first (entropy-length/32) bits of its SHA256 hash.
+-Add the checksum to the end of the random sequence.
+-Split the result into 11-bit length segments.
+-Map each 11-bit value to a word from the predefined dictionary of 2048 words.
+-The mnemonic code is the sequence of words.
+
+-The first parameter to the PBKDF2 key-stretching function is the mnemonic produced from step 6.
+-The second parameter to the PBKDF2 key-stretching function is a salt. The salt is composed of the string constant "mnemonic" concatenated with an optional user-supplied passphrase string.
+-PBKDF2 stretches the mnemonic and salt parameters using 2048 rounds of hashing with the HMAC-SHA512 algorithm, producing a 512-bit value as its final output. That 512-bit value is the seed.
+
+BIP39的测试网页
+https://iancoleman.io/bip39/
+
+从parent key生成child key的过程
+parent key + parent chain code + Index number(0) -> hash -> 512 bits result -> left256 bits as child private key & right 256 bits as child(index 0) chain code
+Only the parent key and chain code can derive all the children. 
+
+Extended keys = key + chain code 
+Extended key有两种：扩展私钥和扩展公钥，扩展私钥可以产生子私钥，子私钥可以得出公钥；扩展公钥只能产生子公钥
+Extended key是base58check格式，以特定的version开头，所以显示出来的串以"xprv" and "xpub"开头
+
+M/44'/0'/0'/0/2         The third receiving public key for the primary bitcoin account
+M/44'/0'/3'/1/14        The fifteenth change-address public key for the fourth bitcoin account
+M/44'/2'/0'/0/1         The second private key in the Litecoin main account, for signing transactions
+
+HD钱包的树结构
+M(公钥)/44(BIP-44)/0'(比特币)/0'(第一个账户)/0(收款地址)/2(第3个账号)
+M(公钥)/44'(BIP-44)/0'(比特币)/3'(第四个账户)/1(找零地址)/14(第15个账号)
+M(私钥)/44'()BIP-44/2'(Litecoin)/0'(第一个账户)/0(收款地址)/1(第2个账号)

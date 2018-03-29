@@ -1,0 +1,33 @@
+生成新地址
+root@DESKTOP-EAJVPOG:/mnt/c/Users/lanro/bitcoin/bitcoin# bitcoin-cli getnewaddress
+373ZDCVvoptaQLYF71b4Z1zuzeauGDJg7E
+
+找到对应的私钥
+root@DESKTOP-EAJVPOG:/mnt/c/Users/lanro/bitcoin/bitcoin# bitcoin-cli dumpprivkey 373ZDCVvoptaQLYF71b4Z1zuzeauGDJg7E
+KyxawBMniUYAwv2HwgncqNBs99UjZbAZbBt4fCsKiVgAqzjSi4A2
+
+转换私钥的格式
+root@DESKTOP-EAJVPOG:/mnt/c/Users/lanro/bitcoin/bitcoin# bx wif-to-ec KyxawBMniUYAwv2HwgncqNBs99UjZbAZbBt4fCsKiVgAqzjSi4A2
+51bb37cd59490623e5f3796455a9bc6441adb07fd9e5d5c7ed6c6084bdce0443
+
+base58 decode私钥
+root@DESKTOP-EAJVPOG:/mnt/c/Users/lanro/bitcoin/bitcoin# bx base58check-decode KyxawBMniUYAwv2HwgncqNBs99UjZbAZbBt4fCsKiVgAqzjSi4A2
+wrapper
+{
+    checksum 4011807492
+    payload 51bb37cd59490623e5f3796455a9bc6441adb07fd9e5d5c7ed6c6084bdce044301
+    version 128
+}
+
+从hex到WIF-compressed （K或者L开头的base58串）
+root@DESKTOP-EAJVPOG:/mnt/c/Users/lanro/bitcoin/bitcoin# bx base58check-encode 51bb37cd59490623e5f3796455a9bc6441adb07fd9e5d5c7ed6c6084bdce044301  --version 128
+KyxawBMniUYAwv2HwgncqNBs99UjZbAZbBt4fCsKiVgAqzjSi4A2
+或者
+root@DESKTOP-EAJVPOG:/mnt/c/Users/lanro/bitcoin/bitcoin# bx ec-to-wif 51bb37cd59490623e5f3796455a9bc6441adb07fd9e5d5c7ed6c6084bdce0443
+KyxawBMniUYAwv2HwgncqNBs99UjZbAZbBt4fCsKiVgAqzjSi4A2
+
+从hex到WIF （5开头的base58串）
+root@DESKTOP-EAJVPOG:/mnt/c/Users/lanro/bitcoin/bitcoin# bx base58check-encode 51bb37cd59490623e5f3796455a9bc6441adb07fd9e5d5c7ed6c6084bdce0443  --version 128
+5JSHJG2zUyY5X7aNWcJ8fbhyg17HSWVSxn4QwRSSzS5LuShddj2
+
+BIP-38是对WIF(5***)private key用密钥进行AES加密，结果是base58Check_encoded private key string, 以6P开头. 
