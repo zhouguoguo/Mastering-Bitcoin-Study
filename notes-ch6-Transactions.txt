@@ -1,0 +1,10 @@
+transaction fee estimation:
+https://bitcoinfees.earn.com/
+
+The fee estimation data can be retrieved via a simple HTTP REST API, at https://bitcoinfees.21.co/api/v1/fees/recommended. 
+root@DESKTOP-EAJVPOG:/mnt/c/Users/lanro/bitcoin/bitcoin# curl https://bitcoinfees.21.co/api/v1/fees/recommended
+{"fastestFee":10,"halfHourFee":10,"hourFee":10}
+
+A locking script is a spending condition placed on an output,the locking script was called a scriptPubKey, witness script or a cryptographic puzzle.
+An unlocking script is a script that "solves," or satisfies, the conditions placed on an output by a locking script and allows the output to be spent. Unlocking scripts are part of every transaction input.the unlocking script was called scriptSig,witness
+

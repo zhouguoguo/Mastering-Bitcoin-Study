@@ -1,4 +1,4 @@
-签包是私钥的容器，一般实现为结构化文件或者简单的数据库、
+钱包是私钥的容器，一般实现为结构化文件或者简单的数据库、
 钱包分两种类型：
 随机签包nondeterministic wallet,also known as a JBOK wallet from the phrase "Just a Bunch Of Keys." -- key互相之前没有关系
 确定性签包a deterministic wallet,known as a hierarchical deterministic or HD wallet -- 所有的key都是从一个master key(seed)中产生的
