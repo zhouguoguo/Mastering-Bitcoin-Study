@@ -8,3 +8,5 @@ root@DESKTOP-EAJVPOG:/mnt/c/Users/lanro/bitcoin/bitcoin# curl https://bitcoinfee
 A locking script is a spending condition placed on an output,the locking script was called a scriptPubKey, witness script or a cryptographic puzzle.
 An unlocking script is a script that "solves," or satisfies, the conditions placed on an output by a locking script and allows the output to be spent. Unlocking scripts are part of every transaction input.the unlocking script was called scriptSig,witness
 
+SIGHASH flag
+ALL|ANYONECANPAY-可用于募资：发起一个目标数目的转账交易，output为集款地址，此时还没有input;等承诺发款人输入input, 募集到目标款额交易才能成功；每个input的签名覆盖到所有output和当前自己的input
