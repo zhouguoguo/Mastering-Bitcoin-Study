@@ -3,3 +3,63 @@
 3.timelocks
 4.Segregated Witness
 
+1. Multisignature
+M-of-N scheme
+目前的多重签名限制了N的上限为3：IsStandard()函数，意味着标准的多重签名的上限是3;而经过P2SH加持的多重签名上限为15
+
+多重签名的locking script
+M <Public Key 1> <Public Key 2> ... <Public Key N> N CHECKMULTISIG
+a 2 of 3 multisignature scripts looks like:(after combined)
+<Signature B> <Signature C> 2 <Public Key A> <Public Key B> <Public Key C> 3 CHECKMULTISIG
+There is a bug when CHECKMULTISIG execution, that is it will pop one more elements from the stack, so an additional 0 is added:
+0 <Signature B> <Signature C> 2 <Public Key A> <Public Key B> <Public Key C> 3 CHECKMULTISIG
+The operation processing:
+https://bitcoin.stackexchange.com/questions/40669/checkmultisig-a-worked-out-example
+note: 签名顺序需要和pubkey的顺序一致
+
+
+2.Pay-to-Script-Hash
+P2SH means "pay to a script matching this hash, a script that will be presented later when this output is spent."
+
+the locking script:
+HASH160 54c557e07dde5bb6cb791c7a540e0a4796f5e97e EQUAL
+
+the unlocking script:
+<Sig1> <Sig2> <2 PK1 PK2 PK3 PK4 PK5 5 CHECKMULTISIG>
+
+Verification step 1: make sure the redeem script match with the hash in locking script
+<2 PK1 PK2 PK3 PK4 PK5 5 CHECKMULTISIG> HASH160 <redeem scriptHash> EQUAL
+Verification step 2: execute the locking script
+<Sig1> <Sig2> 2 PK1 PK2 PK3 PK4 PK5 5 CHECKMULTISIG
+
+P2SH的好处是将复杂的redeem script从locking script转移到unlocking script里，降低了sender交易的复杂度，将复杂度转移到接收者花费utxo的过程里去。同时，因为redeem script从utxo里转移走，只存在区块链中，降低了存储代价。
+Risk:locking script里不包含redeem脚本信息，因而在一个针对该P2SH的交易生成之后，即使unlocking script包含错误的redeem脚本，该UTXO仍然被锁住了，也就是这笔比特币不能被再次花费
+
+Data Recording Output (RETURN)
+因为有记录任意信息在区块链上的需求，可以产生一个永远不能被花费的UTXO,output address里记录的是任意data,而非key的信息，所以永远无法被花费
+这种实现方式有很多争议，因为它会一味地增加UTXO数量
+改进方法是采用RETURN操作符，这样显式地产生不可花费的output,因而不被记录到UTXO中去，只占用区块链的空间。
+RETURN scripts look like this:
+RETURN <data>
+<data>允许存储80bytes的大小的数据
+如果某个交易的input指向的output是一个RETURN操作，那么这个交易会被认为invalid
+
+
+3.timelocks
+nLocktime -- transaction-level timelock
+transaction级别的nLocktime，指示在某个时间点之后，或者区块高度高于多少之后，该交易才valid,可以被广播到网络当中去进行处理。在这之前，程序会将交易hold住，如果提前广播，会被第一个接收到的note拒绝并且不再进行转发。
+nlockTime==0:交易立即被处理
+0<nlocktime<500,000,000:交易在该区块高度之后被处理
+nLocktime>500,000,000:交易在该unix时间点之后被处理
+nLockTime的局限性：
+当Alice向Bob发送一笔交易，但是设置nLockTime在3个月后生效，这只能保证Bob在这三个月之内不能花费这笔output，但不能保证Alice不在这三个月之类将这笔钱再花一次。
+
+Check Lock Time Verify (CLTV) -- output-based timelock
+2015年12月，BIP-65 引入新的操作符 CHECKLOCKTIMEVERIFY 
+一般的locking script:
+DUP HASH160 <Bob's Public Key Hash> EQUALVERIFY CHECKSIG
+加入timelock限制的locking script：
+<now + 3 months> CHECKLOCKTIMEVERIFY DROP DUP HASH160 <Bob's Public Key Hash> EQUALVERIFY CHECKSIG
+数据取值范围跟nLockTime一样，代表区块高度或者时间
+当Bob想花费这笔output的时候，他创建一笔交易，input索引到上述output, 并且设置transaction的nLockTime大于等于CLTV.
+所以当Alice再想花这笔钱的时候，上笔
