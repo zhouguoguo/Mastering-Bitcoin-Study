@@ -59,7 +59,151 @@ Check Lock Time Verify (CLTV) -- output-based timelock
 一般的locking script:
 DUP HASH160 <Bob's Public Key Hash> EQUALVERIFY CHECKSIG
 加入timelock限制的locking script：
-<now + 3 months> CHECKLOCKTIMEVERIFY DROP DUP HASH160 <Bob's Public Key Hash> EQUALVERIFY CHECKSIG
+<绝对时间> CHECKLOCKTIMEVERIFY DROP DUP HASH160 <Bob's Public Key Hash> EQUALVERIFY CHECKSIG
 数据取值范围跟nLockTime一样，代表区块高度或者时间
-当Bob想花费这笔output的时候，他创建一笔交易，input索引到上述output, 并且设置transaction的nLockTime大于等于CLTV.
-所以当Alice再想花这笔钱的时候，上笔
+当想花费这笔output的时候，他创建一笔交易，input索引到上述output, 并且设置transaction的nLockTime大于等于CLTV.
+所以Alice不能将这笔utxo在CLTV时间之前花费掉.
+issue:
+https://github.com/bitcoinbook/bitcoinbook/issues/542
+
+Relative timelocks
+the clock doesn’t start counting until the UTXO is recorded on the blockchain
+nSequence --- transaction-level relative timelock,set in every transaction input  (BIP68)
+CHECKSEQUENCEVERIFY (CSV) --- Script-level relative timelocks  (BIP112)
+相对时间锁主要用在闪电网络中!
+
+nSequence
+表示input对应的utxo需要经历多少秒或者多少区块，才算成熟，才能被花费
+设置了nLocktime or CHECKLOCKTIMEVERIFY的transaction,nSequence必须设置为小于0xFFFFFFFF
+nSequence < 2^31 ---> a relative timelock
+nSequence >= 2^31 ---> reserved for other uses such as enabling CHECKLOCKTIMEVERIFY, nLocktime, Opt-In-Replace-By-Fee, and other future developments
+nSequence小于2^31(首位置0)说明设置了timelock，只有该input对应的UTXO已经足够地成熟(已经经历了多少时间).
+第22位为标志位，置1说明时间，置0说明区块数
+
+CHECKSEQUENCEVERIFY (CSV)
+The CSV opcode when evaluated in an UTXO’s redeem script allows spending only in a transaction whose input nSequence value is greater than or equal to the CSV parameter.
+也就是说该utxo只有在被mined之后经历了一定的区块或者时间之后，才能被花费
+
+nLockTime和CLTV表示的类型需要对应起来，同时表示时间或者区块数
+nSequence和CSV表示的类型需要对应起来，同时表示时间或者区块数
+
+因为相对时间锁的引入，带来了一个缺陷，就是节点可以篡改自己的时间，来处理不符合时间要求的transaction，以赚取手续费。因此，Median-Time-Past(BIP-113)在相对时间锁引入的同时被引入，用来防止此类问题。
+Median-Time-Past是过去的11个区块的时间的中位数
+影响了nLocktime, CLTV, nSequence, and CSV的计算，过去的11个区块的时间覆盖了过去的两个小时，所取得的中位数趋近于早于当前标准时间的一个小时。
+
+Timelock Defense Against Fee Sniping
+TimeLock的另一个作用是防止矿工Fee Sniping
+攻击原理：当区块#100000被挖出之后，矿工如果想重新挖第100000个区块的话(也就是改写#100000)，他们会根据手续费高低，选择打包当前mempool中待处理的高手续费的交易和重新打包#100000中的高手续费的交易
+如何用timelock避免此类问题:bitcoin core将每个transaction的nLockTime都打上nLockTime设置为当前最新区块的下一个区块的高度,并且将所有input的nSequence设置成0xFFFFFFFE来激活nLockTime。
+因此，矿工在remine#100000区块时，只能打包nlocktime<=100000的交易，无法获得新的交易的手续费.
+
+比特币脚本中的流控制Flow Control
+IF, ELSE, ENDIF, and NOTIF opcodes
+与一般的编程语言的条件控制语句顺序相反，比特币脚本的控制语句条件出现在IF操作符之前
+
+另一种形式的条件控制语句是以VERIFY结尾的操作符
+与IF ELSE不同，VERIFY操作符不会在两个执行路径中选一执行，而是一条guard线索，只在满足条件的情况下继续执行
+Notes:以VERIFY结尾的操作符，不会将true或者false的结果入栈
+
+在脚本中使用Flow control语句：
+Locking script:
+IF
+  <Alice's Pubkey> CHECKSIG
+ELSE
+  IF
+    <Bob's Pubkey> CHECKSIG
+  ELSE
+    <C's Pubkey> CHECKSIG
+  ENDIF
+ENDIF
+相应的unlocking script:
+如果Alice想redeem这笔钱，那么Alice的unlocking script: <Alice's Sig> 1(true使得外层条件语句走向IF分支，也就是Alice分支)
+如果Bob想redeem这笔钱，那么Bob的unlocking script: <Bob's Sig> 1(true使得内层条件语句走向IF分支，也就是Bob分支) 0(false使得外层条件语句走向ELSE分支，也就是Bob和Charlie的分支)
+如果Charlie想redeem这笔钱，那么Charlie的unlocking script: <Charlie's Sig> 0 0
+
+一个更复杂的脚本用例:
+01  IF
+02    IF
+03      2
+04    ELSE
+05      <30 days> CHECKSEQUENCEVERIFY DROP
+06      <Abdul the Lawyer's Pubkey> CHECKSIGVERIFY
+07      1
+08    ENDIF
+09    <Mohammed's Pubkey> <Saeed's Pubkey> <Zaira's Pubkey> 3 CHECKMULTISIG
+10  ELSE
+11    <90 days> CHECKSEQUENCEVERIFY DROP
+12    <Abdul the Lawyer's Pubkey> CHECKSIG
+13  ENDIF
+
+第1种执行路径的unlocking srcipt:
+0 <Mohammed's Sig> <Zaira's Sig> TRUE TRUE
+则真正执行的执行脚本为:
+0 <Mohammed's Sig> <Zaira's Sig> 2 <Mohammed's Pubkey> <Saeed's Pubkey> <Zaira's Pubkey> 3 CHECKMULTISIG
+是一个2of3的多重签名，由Mohammed Saeed Zaira三人中两个人支配这笔output
+
+第2种执行路径的unlocking script:
+0 <Saeed's Sig> <Abdul's Sig> FALSE TRUE
+则真正执行的脚本为:
+0 <Saeed's Sig> <Abdul's Sig> <30 days> CHECKSEQUENCEVERIFY DROP <Abdul the Lawyer's Pubkey> CHECKSIGVERIFY 1 <Mohammed's Pubkey> <Saeed's Pubkey> <Zaira's Pubkey> 3 CHECKMULTISIG
+三十天后，先验证律师Abdul的签名，然后执行1of3的多重签名，并提供三人中的一个签名
+
+第3种执行路径的unlocking script:
+<Abdul's Sig> FALSE
+则真正执行的脚本为：
+<Abdul's Sig> <90 days> CHECKSEQUENCEVERIFY DROP <Abdul the Lawyer's Pubkey> CHECKSIG
+由律师在90天后，独自签名完成花费该output
+
+思考:
+Why can’t the lawyer redeem the third execution path at any time by selecting it with FALSE on the unlocking script?
+因为律师的执行路径里需要设置了CheckLockTimeVerify,也就是说律师想独自支配这笔交易，必须经过CLTV大于90天的验证，此时间是个相对时间.
+
+How many execution paths can be used 5, 35, and 105 days, respectively, after the UTXO is mined?
+5天后，执行路径1
+35天后，执行路径有1,2
+105天后，执行路径有1，2，3
+
+Are the funds lost if the lawyer loses his key? Does your answer change if 91 days have elapsed?
+只要三个人中两个人的私钥还在，那么一直可以使用路径1来支配这笔钱，即使90天过去。
+
+How do the partners "reset" the clock every 29 or 89 days to prevent the lawyer from accessing the funds?
+如何通过“重置”时间锁来阻止时间超过29天或者89天来阻止律师介入支配过程?
+因为是设置的相对时间锁，在三十天之内，三人中的两人完成2of3多重签名来使用这笔钱，来产生一个新的output，locking script与原先的一样.
+
+Why do some CHECKSIG opcodes in this script have the VERIFY suffix while others don’t?
+最后执行的CHECKSIG需要留下执行结果TRUE以保证脚本通过验证.
+
+
+4.Segregated Witness隔离见证(BIP-9)
+signature是一种witness, 但是witness的含义更广
+
+为什么要引入隔离见证?
+1.交易延展性Transaction Malleability
+通过将witness也就是签名值移出transaction,也就是transaction的id已经不包含witness的数据。
+因为transaction中的witness数据，是唯一一个可以被第三方修改的数据，那么移除了witness,也就防止了交易延展攻击
+在隔离见证的前提下，交易哈希值只能被交易创建者修改，任何其他人无法修改。这大大增加了很多依赖构建于高级比特币脚本之上的协议，比如支付通道，chained transactoin，闪电网络
+2.脚本语言版本
+随着隔离见证的引入，每个locking script都有一个脚本版本号。这样可以通过软分叉的方式来升级系统，来引入新的操作符，语法。
+3.Network and Storage Scaling网络和存储扩展
+witness数据一般在transaction中占比很大。移出witness data可以起到扩容效果。节点在验证完交易之后，可以删除witness数据，witness数据不需要所有的节点都保存在硬盘中。
+4.隔离见证升级了签名算法CHECKSIG, CHECKMULTISIG等方法来降低计算复杂度。在隔离见证以前，签名算法的实现上，使用了一些哈希算法，哈希算法复杂度根transaction的大小成比例。
+所以随着签名算法的数量递增，哈希计算量成O(n^2)增加，大大增加了节点的验证签名的负担。
+隔离见证之后，算法复杂度降为O(n)
+5.改进离线签名?
+隔离见证的签名包含了input的总额，对于冷钱包来说，在隔离见证之前，需要在签名之前来验证被input reference的那些交易。?
+
+隔离见证如何工作?
+隔离见证关系到每个utxo如何花费，是一个关于output的feature
+一个交易可以同时花费隔离见证的output和非隔离见证的output
+当一个交易花费一个utxo时，他必须提供一个witness。对于传统的utxo，locking script需要花费它的input里内置witness；而一个隔离见证的output，提供一个locking script可以被input以外的witness数据满足。
+
+软分叉(向后兼容)
+隔离见证是对output和transaction架构的一个显著的改变。
+软分叉的形式允许未升级系统的节点可以忽略这些改变，而不受任何影响地运行。
+隔离见证的output让老系统也可以验证它。对于一个老的钱包或者节点，隔离见证形式的output看上去类似一个anyone can spend的output.这类output可以不提供签名的情况下被花费。
+因此，对于一个隔离见证的output和对应于花费它的input，老节点认为是一个anyone can spend的output，被一个未提供签名的input正确花费。
+新节点会在交易的witness数据中找到合法的witness来验证交易。
+
+Examples
+
+
