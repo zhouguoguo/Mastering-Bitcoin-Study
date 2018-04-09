@@ -205,5 +205,37 @@ witness数据一般在transaction中占比很大。移出witness data可以起�
 新节点会在交易的witness数据中找到合法的witness来验证交易。
 
 Examples
+Example P2PKH output script：
+DUP HASH160 ab68025513c3dbd2f7b92a94e0581f5d50f654e7 EQUALVERIFY CHECKSIG
+P2WPKH output script：
+0 ab68025513c3dbd2f7b92a94e0581f5d50f654e7
 
+作为隔离见证的output, 0代表vitness版本, 后面的20字节代表vitness program, witness program就是公钥哈希
+老节点处理隔离见证output时，作为一个anyone can pay的交易处理。
 
+While P2SH uses the 20-byte RIPEMD160(SHA256(script)) hash, the P2WSH witness program uses a 32-byte SHA256(script) hash. 
+隔离见证意味着input中的scriptsig可以为空，而witness内容被移到了交易的最后部分
+
+P2WPKH和P2WSH类型的支付交易，需要支付方和接收方的钱包都支持segwit.
+但是因为向后兼容的方式升级，支持以下两种支付场景：
+1.老钱包向新钱包完成一笔支付
+2.新钱包通过地址区分哪些接收者是segwit-aware哪些接收是segwit-unaware
+
+假如Alice的钱包不支持隔离见证，她要支付给Bob，Bob的钱包支持隔离见证。他们可以通过非隔离见证的方式交易，但是Bob想在花费这笔钱的时候采用隔离见证的方式，以减少手续费。
+这种情形下，Bob可以生成一个包含segwit脚本的P2SH地址，这样Alice看见这个地址认为是一个正常的P2SH的地址正常进行支付。Bob可以后续采用P2WSH的方式，花费这笔钱。
+(也就是Alice作为老钱包，不能生成类似0 ab68025513c3dbd2f7b92a94e0581f5d50f654e7这种隔离见证的locking script，采取将segwit嵌入P2SH)
+
+将P2WPKH嵌入P2SH --- P2SH(P2WPKH)
+将P2WSH嵌入P2SH --- P2SH(P2WSH)
+
+P2SH(P2WPKH)
+新节点Bob在准备接收Alice老节点的支付时，先生成一个正常的P2WPKH地址(0 ab68025513c3dbd2f7b92a94e0581f5d50f654e7),然后Bob将该地址做哈希160,生成redeem script，
+再对redeem script进行编码生成比特币地址(3开头)
+
+隔离见证的最大好处之一是消除了交易的延展性，因为第三方在完成签名之后，才计算哈希值作为交易的ID.这使得transaction id可以被第三方任意修改。
+在引入隔离见证之后，每个交易有两个id。一个是传统txid，是两次hash256的结果(出去witness data)， 另一个id是wtxid,包含witness data的两次哈希结果。
+引入隔离见证之后，txid的计算方法和原来一样，但是因为scriptsig为空，交易没有任何一个地方可以被第三方修改。wtxid是一个扩展id，当交易没有与witness data一起传输，txid和wtxid是一样的。
+
+引入隔离见证的两个好处：
+1.通过除去witness数据来降低交易的总消耗。
+2.通过除去witness数据来使得减少UTXO数量的交易产生更少的交易费。与激励用户来减少UTXO的动机一致。
