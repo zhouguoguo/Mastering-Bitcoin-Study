@@ -32,6 +32,8 @@ bitcoind -daemon
 bitcoin-cli getblockchaininfo
 bitcoin-cli stop
 
+Safely delete the blockchain from .bitcoin directory：
+Delete the "blocks" and "chainstate" directories under ~/.bitcoin
 
 4. bitcoin-cli命令
 查看transaction的raw数据

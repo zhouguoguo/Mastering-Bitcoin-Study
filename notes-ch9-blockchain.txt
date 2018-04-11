@@ -1,0 +1,51 @@
+1.Introduction
+Bitcoin Core Client使用Google的LevelDB来存储区块链元数据。
+区块链通常被想象成一个垂直的堆栈，区块在顶端堆叠，首个区块为栈基。因此通常用height来描述区块距离首个区块的距离，用top来指明最新的区块。
+协议总允许一个链被更长的链所替代，并且任何块被撤销的概率总是有的，但是这个概率随着时间的推移会变得越来越小，直至无穷小。
+
+2.Structure of a block
+区块是一个数据结构的容器。区块由元数据组成的header和一组交易构成。Header为80字节，每个交易平均大小至少为400字节，每个区块中平均包含至少1900个交易。
+一个完整的区块的大小，是它的Header的1000倍
+
+3.Block Header
+包含三块数据，前一个区块哈希值;难度,时间戳,nonce;Merkle root
+
+4.Block identifiers
+区块的主要标识是区块哈希值，区块哈希值不作为区块数据内容，也不在网络上传播。而是节点在网络上接收到区块时，实时计算。通过将区块哈希值存于另外的存储空间中作为区块的元数据，来加快从硬盘中索引区块数据。
+另一种区块的标识方法是区块高度，第一个区块为高度0. 区块高度也不作为区块的内容进行存储，区块高度也可以另外存储以提高区块数据的检索效率。
+
+5.The genesis block
+创世区块的高度为0
+
+6.Linking blocks in the blockchain
+
+7.Merkle trees
+Merkle Tree使用double-SHA256
+
+8.Merkle trees and SPV
+SPV节点使用Merkle树。首先，SPV节点将钱包关联的地址记录在bloom filter里，然后广播给相邻节点，对端接收到与过滤器符合的交易之后，将发送给SPV一个merkleblock消息。该消息包含区块header和交易到root的merkle路径。
+
+9.Bitcoin's Test Blockchains
+比特币的测试链有Testnet，segnet，regnet
+testnet测试链，测试币没有价值，公链
+启动testnet3:
+bitcoind -testnet -daemon
+查看blockchain信息:
+bitcoin-cli -testnet getblockchaininfo
+停止:
+bitcoin-cli -testnet stop
+
+regnet本地链
+https://bitcoin.org/en/developer-examples#testnet
+启动regnet:
+bitcoind -regtest -daemon
+查看区块链信息
+bitcoin-cli -regtest getblockchaininfo
+挖500个矿：
+bitcoin-cli -regtest generate 500
+查看账户余额:只有区块高度大于100才可以拿到coinbase奖励进行花费，400个挖矿奖励已经到账
+root@DESKTOP-EAJVPOG:~/.bitcoin# bitcoin-cli -regtest getbalance
+12462.50000000
+
+10.Using Test Blockchains for Development
+做比特币的开发，先通过本地的链进行测试开发(regtest),然后上testnet测试，最后上mainnet发布产品.
