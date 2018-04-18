@@ -1,0 +1,19 @@
+1.Introduction
+2.Building Blocks (Primitives)
+3.Applications from Building Blocks
+
+4.Colored Coins
+Enhanced Padded-Order-Based Coloring
+在output使用OP_RETURN来标识染色币资产。这种ouput叫marker output。output的顺序决定了不同的彩色币的协议。在marker output之前的output指资产发行；在marker output之后的output指转移资产。而marker output
+在Colu中，output里编码了一个opcode，来确定metadata如何解释。
+
+5.Counterparty
+
+6.Payment Channels and State Channels
+State Channels基本概念和术语
+State Channels一开始有一个锚定交易被提交到区块链，在支付通道里，这个锚定交易是通道的初始balance.
+然后双方会交换签名交易，来改变初始状态。
+最后，一个commitment交易被提交到区块链，来关闭支付通道。
+
+
+7.Routed Payment Channels (Lightning Network)

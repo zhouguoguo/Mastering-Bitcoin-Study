@@ -1,0 +1,67 @@
+1.Introduction
+通过工作量证明的竞争获得奖励和记录交易，是比特币的安全模型。
+2.Decentralized Consensus
+比特币的分布式共识机制主要由以下四个过程完成:
+a.独立验证交易
+b.通过工作量证明打包交易进区块
+c.独立验证区块加进区块链
+d.独立选择一条链(加入新区块)
+
+3.Independent verification of transactions
+bitcoin core里验证交易的规则由AcceptToMemoryPool, CheckTransaction, and CheckInputs这几个函数定义
+
+4.Mining Nodes
+有些挖矿节点是全节点，有些不是(Mining pool)
+
+5.Aggregating Transactions into Blocks
+Coinbase交易和普通的交易区别是，Coinbase交易的input没有scriptsig,取而代之的是Coinbase data.
+
+6.Constructing the Block Header
+Blockheader包含的字段:
+4  bytes  version
+32 bytes  preHash
+32 bytes  merkleroot
+4  bytes  timestamp
+4  bytes  target
+4  bytes  nouce
+
+7.Mining the Block
+如何自动调整target来将挖矿时间稳定在10分钟？计算过去的2016个区块所用的时间，和20160min进行比较，来按照比例向上或向下调整。
+
+8.Successfully Mining the Block
+当4bytes的nouce值遍历完仍然没有找到复核结果的值，那么改变coinbase中的额外nonce值或者改变timestamp来使得blockheader发生改变，然后reset nonce重新开始计算。
+
+9.Validating a New Block
+检查block合法性的函数在CheckBlock and CheckBlockHeader中定义。主要检查的项有：
+a.语法的合法性
+b.检查工作量证明
+c.时间戳小于未来的两小时
+d.区块大小不超过限制
+e.有且只有第一个交易是coinbase
+f.区块中的所有交易是合法交易
+
+10.Assembling and Selecting Chains of Blocks
+每个节点维护了三种类型的区块：主链上的区块，从主链分叉的区块，和孤儿区块。
+主链是任何时候具有最多的累计工作量证明的链。大部分时候也是具有最多区块数量的链。但是分叉的区块也会被保留，以防止将来短链会超过长链成为主链。
+如果一个挖矿节点发现自己保存的短链已经超过了长链，会把以前的分叉链切成主链，开始基于新的主链工作。
+一般来说，one blcok的分叉每天会发生，two block的分叉每隔几周会发生。
+比特币10分钟出块的设计初衷就在于确认交易和发生分叉的概率的平衡。出块时间短，交易确认快，但是发生分叉的概率大；出块时间长，交易确认慢，分叉的概率就小。
+
+11.Mining and the Hashing Race
+挖矿池采取设定一个低难度的哈希目标值，一个矿池中的所有参与者通过计算符合矿池设定条件的哈希值来确定自己的股份，当真正的更难的目标哈希值被算出来之后，矿池中的所有参与者，根据股份来分成。
+
+12.Consensus Attacks
+51% attack
+当A向B支付了一笔比特币之后，还没有得到6个区块的确认之前，就把商品卖给了A；A支付一笔新的交易到自己(double spent)，然后马上联系矿池让重新把该交易打包并挖矿，如果狂池掌握50%以上算力，
+意味着它能大概率挖到矿，并且把区块加到之前那个交易所在区块之前，产生一个分叉，并且在这个分叉之后连续产生新区快，使得分叉的分链超过主链，而使得原来的主链上的交易失效。
+除了51%攻击，还有拒绝服务攻击:
+也就是拒绝处理某地址相关的交易，或者对某些已经上链的交易通过重挖区块来撤销。
+当然51%攻击并不需要一定掌握51%的算力，事实上，掌握的算力越大，攻击的成功率越大，51%是一个几乎可以成功的概率。经过分析，大概30%的算力就有可能成功攻击。
+
+13.Changing the Consensus Rules
+
+14.Soft Fork Signaling with Block Version
+Signaling and Activation的机制是用来实施软分叉制定的标准，BIP-34已经用来实施了block version从1到2到3到4的每一次的软分叉升级，之后取而代之的是BIP-9
+BIP9成功激活了CHECKSEQUENCEVERIFY和BIPs (68, 112, 113)
+
+15.Consensus Software Development
